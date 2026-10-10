@@ -59,6 +59,6 @@ Templates: [`.specify/templates/`](.specify/templates/).
 
 - Every acceptance criterion in `spec.md` is checked, and every task in `tasks.md` is done.
 - `dotnet build` and `dotnet test` pass.
-- If the behavior changed, update the spec docs **first** (`business-rules.md`, `glossary.md`, `mcp-tools.md`). The docs must never be older than the code.
+- Last step of the implementation: update `specs/domain/business-rules.md` if a rule was created or changed, and `specs/domain/mcp-tools.md` if an MCP tool was created or changed (create the file if it does not exist). The docs must never be older than the code.
 - Set the feature `Status:` to `Implemented` and update `specs/backlog.md`.
 - Do not add details about one feature here. They go in the feature folder.

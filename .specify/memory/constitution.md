@@ -1,27 +1,15 @@
 <!--
 Sync Impact Report
-- Version change: 1.0.0 → 2.0.0 (MAJOR: rules and names that came from another project were
-  removed; every principle was rewritten using only this repository as the source)
-- Sources used: this repo's CLAUDE.md and README.md, plus decisions made by the owner during the
-  amendment. No entity, field, or class names are defined here — they belong in
-  specs/domain/glossary.md.
-- Principles (renamed/reworded):
-  - I. Specs Are the Source of Truth — added concise-spec rules
-  - II. Accounts Are the Root of All Data — new
-  - III. Thin Edges, CQRS Core
-  - IV. Behavior Is Test-Backed (NON-NEGOTIABLE)
-  - V. Test Against the Real Engine
-  - VI. Financial Data Integrity — `needsConfirm` two-step flow for destructive operations
-  - VII. Explicit Contracts and Security Boundaries — `X-Account-Group` on every call; `/auth/*`
-    exempt
-  - VIII. Simplicity and Maintainability
-- Removed: class/field names, auth scopes, CSV format, status-timestamp and SQLite rules that were
-  copied from another project's documentation.
-- Governance: direct edits to this file allowed, with the same versioning/report rules.
-- Templates: not modified. spec-template.md is long by default; Principle I's size rules apply.
-- Follow-up TODOs:
-  - specs/ domain docs (business-rules.md, glossary.md, mcp-tools.md, architecture.md, backlog.md)
-    do not exist yet; create them before the first /speckit-plan.
+- Version change: 2.0.0 → 2.1.0 (MINOR: materially expanded guidance)
+- Modified principles:
+  - I. Specs Are the Source of Truth — domain docs are now updated as the closing step of every
+    implementation: business-rules.md for new/changed rules, mcp-tools.md for new/changed MCP
+    tools; a missing doc is created on first use.
+- Modified sections:
+  - Development Workflow and Quality Gates — gate 6 names the two docs explicitly.
+- Templates: not modified; /speckit-tasks reads Principle I at runtime and adds the closing tasks.
+- Follow-up TODOs: none (glossary.md, architecture.md and backlog.md are still created on first
+  use).
 -->
 
 # MymoneyMcp Constitution
@@ -32,9 +20,15 @@ Sync Impact Report
 
 - Every feature MUST go through the SDD flow in order: `spec.md` → clarify → `plan.md` →
   `tasks.md` → implement. Code MUST NOT be written for behavior that no spec describes.
-- When behavior changes, the domain docs (`specs/domain/business-rules.md`, `glossary.md`,
-  `mcp-tools.md`, `specs/architecture.md`) MUST be updated **before or in the same change** as
-  the code. Docs MUST never be older than the code.
+- Domain docs MUST be updated as the closing step of every implementation, in the same change
+  as the code. Docs MUST never be older than the code:
+  - `specs/domain/business-rules.md` — whenever the feature creates or changes a business rule.
+  - `specs/domain/mcp-tools.md` — whenever the feature creates or changes an MCP tool (name,
+    parameters, behavior, response, or the REST endpoint that mirrors it).
+  - `specs/domain/glossary.md` and `specs/architecture.md` — whenever a domain term or an
+    architecture decision changes.
+- `tasks.md` MUST end with one task per doc that needs updating. If a doc does not exist yet,
+  that task creates it.
 - Domain names (entities, fields, enums) are defined once, in `specs/domain/glossary.md`, and
   used the same way everywhere else.
 - Known deviations between spec and code (bugs or quirks deliberately left unfixed) MUST be
@@ -191,7 +185,8 @@ A feature MAY be set to `Status: Implemented` only when all gates pass:
    tests where Principle V requires them.
 4. Each new query or command has a cross-group isolation test (Principle II).
 5. The plan's Constitution Check passes, or each violation is justified in Complexity Tracking.
-6. Domain docs are updated (Principle I) and `specs/backlog.md` reflects the new state.
+6. `business-rules.md` and `mcp-tools.md` (and any other affected domain doc) reflect the
+   feature (Principle I), and `specs/backlog.md` reflects the new state.
 7. Review (human or `/code-review`) confirms thin edges, DTO-only responses, and no secrets.
 
 ## Governance
@@ -207,4 +202,4 @@ A feature MAY be set to `Status: Implemented` only when all gates pass:
   violations. An unjustified violation blocks the feature.
 - Compliance is reviewed whenever a feature is closed and at least on every MINOR/MAJOR amendment.
 
-**Version**: 2.0.0 | **Ratified**: 2026-10-10 | **Last Amended**: 2026-10-10
+**Version**: 2.1.0 | **Ratified**: 2026-10-10 | **Last Amended**: 2026-10-10
