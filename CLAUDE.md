@@ -27,7 +27,7 @@ dotnet run --project src/MymoneyMcp.AppHost   # backend + Aspire dashboard
 dotnet build
 dotnet test
 dotnet tool restore                              # pins dotnet-ef to EF Core 10
-dotnet ef migrations add <Name> --project src/MymoneyMcp.Infrastructure --startup-project src/MymoneyMcp.Api
+dotnet ef migrations add <Name> --project src/MymoneyMcp.Infrastructure.Data --startup-project src/MymoneyMcp.Api
 ```
 
 ## Solution layout
@@ -39,7 +39,10 @@ src/
   MymoneyMcp.Api              REST + MCP host (tools in Mcp/Tools)
   MymoneyMcp.Application      MediatR handlers, validators, services (one folder for each feature)
   MymoneyMcp.Domain           entities, value objects, enums
-  MymoneyMcp.Infrastructure   EF Core, CSV import, integrations
+  MymoneyMcp.Infrastructure.*  one project per infrastructure concern:
+    .Data                     EF Core, DbContext, migrations
+    .Auth                     JWT issuance, client credentials
+    (future, e.g. .Import)    CSV import, external integrations
 tests/
   MymoneyMcp.Api.Tests
   MymoneyMcp.Application.Tests
