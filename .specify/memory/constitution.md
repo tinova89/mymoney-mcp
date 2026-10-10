@@ -1,15 +1,14 @@
 <!--
 Sync Impact Report
-- Version change: 2.0.0 → 2.1.0 (MINOR: materially expanded guidance)
-- Modified principles:
-  - I. Specs Are the Source of Truth — domain docs are now updated as the closing step of every
-    implementation: business-rules.md for new/changed rules, mcp-tools.md for new/changed MCP
-    tools; a missing doc is created on first use.
+- Version change: 2.1.0 → 2.2.0 (MINOR: materially expanded guidance)
 - Modified sections:
-  - Development Workflow and Quality Gates — gate 6 names the two docs explicitly.
-- Templates: not modified; /speckit-tasks reads Principle I at runtime and adds the closing tasks.
-- Follow-up TODOs: none (glossary.md, architecture.md and backlog.md are still created on first
-  use).
+  - Technology and Architecture Constraints — infrastructure is split into one
+    `MymoneyMcp.Infrastructure.<Concern>` project per concern (e.g. `.Data`, `.Auth`, future
+    `.Import`); infrastructure projects do not reference each other.
+- Principles: unchanged. A new `Infrastructure.<Concern>` project follows the convention, so it
+  does not need a Complexity Tracking entry (Principle VIII) unless it breaks the convention.
+- Templates: not modified.
+- Follow-up TODOs: none.
 -->
 
 # MymoneyMcp Constitution
@@ -170,8 +169,12 @@ Rationale: a small, consistent codebase stays cheap to change and easy for Claud
 - Stack: .NET 10, .NET Aspire, PostgreSQL via EF Core, MediatR, custom JWT, MCP and REST served
   by the same API host.
 - Layering follows the solution layout in `CLAUDE.md`: `Api` → `Application` → `Domain`;
-  `Infrastructure` implements what `Application` needs. `Domain` MUST NOT reference EF Core,
+  infrastructure projects implement what `Application` needs. `Domain` MUST NOT reference EF Core,
   ASP.NET Core, or any infrastructure package.
+- Infrastructure is split by concern: one `MymoneyMcp.Infrastructure.<Concern>` project each
+  (e.g. `.Data` for persistence, `.Auth` for token issuance, `.Import` for CSV). Infrastructure
+  projects MUST NOT reference each other; they share data only through `Application` interfaces.
+  A new project that follows this convention needs no Complexity Tracking entry.
 - Health checks, telemetry, and resilience come from `MymoneyMcp.ServiceDefaults`, referenced by
   every service project.
 
@@ -202,4 +205,4 @@ A feature MAY be set to `Status: Implemented` only when all gates pass:
   violations. An unjustified violation blocks the feature.
 - Compliance is reviewed whenever a feature is closed and at least on every MINOR/MAJOR amendment.
 
-**Version**: 2.1.0 | **Ratified**: 2026-10-10 | **Last Amended**: 2026-10-10
+**Version**: 2.2.0 | **Ratified**: 2026-10-10 | **Last Amended**: 2026-10-10
