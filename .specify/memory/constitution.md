@@ -22,9 +22,6 @@ Sync Impact Report
 - Follow-up TODOs:
   - specs/ domain docs (business-rules.md, glossary.md, mcp-tools.md, architecture.md, backlog.md)
     do not exist yet; create them before the first /speckit-plan.
-  - CLAUDE.md points to specs/_templates/, but the spec-kit templates live in .specify/templates/.
-  - CLAUDE.md's migration command uses src/MymoneyMcp.Infrastructure.Persistence, which is not in
-    the solution layout.
 -->
 
 # MymoneyMcp Constitution

@@ -27,7 +27,7 @@ dotnet run --project src/MymoneyMcp.AppHost   # backend + Aspire dashboard
 dotnet build
 dotnet test
 dotnet tool restore                              # pins dotnet-ef to EF Core 10
-dotnet ef migrations add <Name> --project src/MymoneyMcp.Infrastructure.Persistence --startup-project src/MymoneyMcp.Api
+dotnet ef migrations add <Name> --project src/MymoneyMcp.Infrastructure --startup-project src/MymoneyMcp.Api
 ```
 
 ## Solution layout
