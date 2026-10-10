@@ -1,24 +1,30 @@
 <!--
 Sync Impact Report
-- Version change: (unversioned template) → 1.0.0
-- Modified principles: all template placeholders replaced (initial ratification)
-  - [PRINCIPLE_1_NAME] → I. Specs Are the Source of Truth
-  - [PRINCIPLE_2_NAME] → II. Thin Edges, CQRS Core
-  - [PRINCIPLE_3_NAME] → III. Business Rules Are Test-Backed (NON-NEGOTIABLE)
-  - [PRINCIPLE_4_NAME] → IV. The Right Test for the Right Engine
-  - [PRINCIPLE_5_NAME] → V. Financial Data Integrity
-  - Added: VI. Explicit Contracts and Security Boundaries
-  - Added: VII. Simplicity and Maintainability
-- Added sections: Technology and Architecture Constraints; Development Workflow and Quality Gates
-- Removed sections: none
-- Templates reviewed (not modified by this command; they read the constitution at runtime):
-  - .specify/templates/plan-template.md (Constitution Check gate) — compatible
-  - .specify/templates/spec-template.md — compatible
-  - .specify/templates/tasks-template.md — compatible (Principle III requires test tasks)
+- Version change: 1.0.0 → 2.0.0 (MAJOR: rules and names that came from another project were
+  removed; every principle was rewritten using only this repository as the source)
+- Sources used: this repo's CLAUDE.md and README.md, plus decisions made by the owner during the
+  amendment. No entity, field, or class names are defined here — they belong in
+  specs/domain/glossary.md.
+- Principles (renamed/reworded):
+  - I. Specs Are the Source of Truth — added concise-spec rules
+  - II. Accounts Are the Root of All Data — new
+  - III. Thin Edges, CQRS Core
+  - IV. Behavior Is Test-Backed (NON-NEGOTIABLE)
+  - V. Test Against the Real Engine
+  - VI. Financial Data Integrity — `needsConfirm` two-step flow for destructive operations
+  - VII. Explicit Contracts and Security Boundaries — `X-Account-Group` on every call; `/auth/*`
+    exempt
+  - VIII. Simplicity and Maintainability
+- Removed: class/field names, auth scopes, CSV format, status-timestamp and SQLite rules that were
+  copied from another project's documentation.
+- Governance: direct edits to this file allowed, with the same versioning/report rules.
+- Templates: not modified. spec-template.md is long by default; Principle I's size rules apply.
 - Follow-up TODOs:
-  - specs/ (business-rules.md, glossary.md, mcp-tools.md, architecture.md, backlog.md) is referenced
-    by CLAUDE.md but does not exist yet; Principle I depends on it.
-  - README.md still describes Portuguese entity names and an older tool list; reconcile with specs.
+  - specs/ domain docs (business-rules.md, glossary.md, mcp-tools.md, architecture.md, backlog.md)
+    do not exist yet; create them before the first /speckit-plan.
+  - CLAUDE.md points to specs/_templates/, but the spec-kit templates live in .specify/templates/.
+  - CLAUDE.md's migration command uses src/MymoneyMcp.Infrastructure.Persistence, which is not in
+    the solution layout.
 -->
 
 # MymoneyMcp Constitution
@@ -32,120 +38,151 @@ Sync Impact Report
 - When behavior changes, the domain docs (`specs/domain/business-rules.md`, `glossary.md`,
   `mcp-tools.md`, `specs/architecture.md`) MUST be updated **before or in the same change** as
   the code. Docs MUST never be older than the code.
-- Known deviations between spec and code (bugs, quirks deliberately left unfixed) MUST be written
-  down in the feature's spec or the domain docs and pinned by a test (see Principle III).
+- Domain names (entities, fields, enums) are defined once, in `specs/domain/glossary.md`, and
+  used the same way everywhere else.
+- Known deviations between spec and code (bugs or quirks deliberately left unfixed) MUST be
+  written down in the spec or domain docs and pinned by a test (see Principle IV).
+- Specs MUST be concise:
+  - One idea per bullet; one sentence per requirement or acceptance criterion.
+  - Prefer tables and lists over prose. No background essays, no history of the decision.
+  - Link to domain docs and this constitution instead of repeating them.
+  - `spec.md` says what and why only; how goes in `plan.md`; steps go in `tasks.md`.
+    Nothing is written twice across the three files.
+  - Remove template sections that do not apply instead of filling them with "N/A".
+  - Target size: `spec.md` ≤ 150 lines, `plan.md` ≤ 200 lines. A larger file is a sign the
+    feature MUST be split; if it cannot be split, say why at the top of the file.
 
-Rationale: the specs are what Claude and humans read first; a stale spec produces wrong code.
+Rationale: the specs are what Claude and humans read first; a stale or bloated spec produces
+wrong code.
 
-### II. Thin Edges, CQRS Core
+### II. Accounts Are the Root of All Data
 
-- MCP tools and REST endpoints MUST only build a request and call `IMediator.Send`/`Publish`.
-  No business rule may live in a tool, endpoint, or middleware (scope/header checks excepted).
-- Reads are Queries and writes are Commands; each is an immutable `record`, with exactly one
+- The account is the top of the data hierarchy. Transactions, categories, and budgets exist only
+  under accounts, and a request can see them only through an account it is allowed to see.
+- The set of visible accounts is defined by the request's `X-Account-Group` header: a request
+  sees only the accounts of that group, and only the data below them:
+  - transactions of those accounts;
+  - categories used by those transactions;
+  - budgets of that group.
+- A budget belongs to a group and a category, not to a single account. Its spent amount adds up
+  the category's transactions across **all** accounts of that group, and never includes
+  transactions from another group.
+- Isolation MUST be enforced in one central place in the persistence layer (e.g. an EF Core
+  global query filter), and MUST NOT depend only on filters written in each handler.
+- A write that references an account outside the current group MUST be rejected as not found,
+  so the existence of other groups' data is never revealed.
+- The scoping path MUST be fast: every table under the account MUST be filterable by group
+  through an indexed column. Copying the group onto child tables is allowed and MUST be decided
+  and justified in the feature's `plan.md`.
+- Every query and command feature MUST include a test proving that data from another group is
+  invisible (reads) or rejected (writes).
+
+Rationale: one family must never see another family's money; scoping at the root keeps every
+feature isolated without each one having to remember it.
+
+### III. Thin Edges, CQRS Core
+
+- MCP tools and REST endpoints MUST only build a request and send it through MediatR. No business
+  rule may live in a tool, endpoint, or middleware (header and auth checks excepted).
+- Reads are queries and writes are commands; each request is immutable and has exactly one
   handler. Domain entities MUST NOT be reused as requests.
-- Request, handler, validator, and response DTO MUST live together in one feature folder
-  (`<Area>/<Action><Entity>/`), never in generic `Commands/`/`Handlers/` folders.
-- Pure calculation rules (budget aggregation, billing cycle, next business day, installments,
-  category parsing) MUST live in injectable domain/application services, not inline in handlers.
-- The pipeline order is fixed: `LoggingBehavior` → `ValidationBehavior` → `TransactionBehavior`
-  (writes only). Notifications MUST NOT carry logic the main flow depends on.
+- Each feature keeps its request, handler, validator, and response DTO together in one folder
+  in `MymoneyMcp.Application`.
+- Calculation rules MUST live in domain or application services injected into handlers, not
+  written inline in handlers.
+- Validation MUST run before the handler, as a MediatR pipeline step, not inside the handler.
 
 Rationale: thin edges make every use case testable without a transport, and keep rules in one place.
 
-### III. Business Rules Are Test-Backed (NON-NEGOTIABLE)
+### IV. Behavior Is Test-Backed (NON-NEGOTIABLE)
 
-- Every business rule, validator rule, and handler path (success, not-found, rejected) MUST have
+- Every business rule, validator rule, and handler path (success, not found, rejected) MUST have
   an automated test before the feature is marked `Implemented`.
 - Every bug fix MUST add a regression test that fails without the fix.
-- Pure rules MUST be unit-tested in isolation from handlers and tools.
-- Tests MUST assert on observable behavior (DTO fields, persisted state, thrown exception type),
-  not on private implementation details.
-- A known, unfixed quirk MUST be locked in by a test that names it as such, so changing it is
-  a visible decision rather than an accident.
-- Money assertions MUST use exact `decimal` values; tolerances and `double` comparisons are
-  forbidden.
-- `dotnet test` MUST be green on `main` at all times; a skipped or disabled test MUST carry a
-  reason and a linked backlog item.
+- Calculation rules MUST be unit-tested in isolation from handlers and tools.
+- Tests MUST assert on observable behavior (returned DTOs, saved data, error returned), not on
+  private implementation details.
+- A known, unfixed quirk MUST be locked in by a test that names it as such, so changing it is a
+  visible decision rather than an accident.
+- Money assertions MUST compare exact `decimal` values; tolerances and floating-point
+  comparisons are forbidden.
+- `dotnet test` MUST be green on `main` at all times; a skipped test MUST carry a reason and a
+  linked backlog item.
 
-Rationale: this system moves and reports family money; an untested rule is an unverified number.
+Rationale: this system reports family money; an untested rule is an unverified number.
 
-### IV. The Right Test for the Right Engine
+### V. Test Against the Real Engine
 
-- Tests that depend on real transactions or EF Core global query filters MUST use SQLite
-  `:memory:` (or real PostgreSQL). The EF Core `InMemory` provider MUST NOT be used for them.
-- A green SQLite test is NOT sufficient evidence for:
-  1. aggregations translated to SQL (`SumAsync`, `GroupBy` → `SUM(...)`), or
-  2. behavior under concurrent writes, transaction isolation, or Npgsql retry.
-  Either case MUST have a real-PostgreSQL integration test (`Testcontainers.PostgreSql`) before
-  it ships.
-- Money calculations SHOULD materialize rows and sum in C# `decimal`; pushing a money aggregation
-  into SQL triggers rule 2 above.
-- Exposed MCP tools MUST have integration coverage through `TestServer` plus a real MCP client
-  (or equivalent) for the auth, header, and serialization path.
-- Scope checks (e.g. `approval`) MUST be tested at the tool level, proving MediatR is never called
-  when the scope is missing.
+- A test double or in-memory database proves application logic only. Behavior that depends on
+  PostgreSQL — query filters, transactions, SQL aggregation, concurrency — MUST be covered by an
+  integration test against a real PostgreSQL instance.
+- Money totals SHOULD be summed in C# `decimal`; when a total is computed in SQL, it MUST have
+  a real-PostgreSQL test.
+- Each MCP tool MUST have an integration test that goes through the real host: authentication,
+  the `X-Account-Group` header, and request/response serialization.
 
-Rationale: each test engine proves only what it can actually run; we choose the engine on purpose.
+Rationale: each test engine proves only what it actually runs; money and isolation rules must be
+proven on the database that runs in production.
 
-### V. Financial Data Integrity
+### VI. Financial Data Integrity
 
-- Money (`Amount`, `GoalAmount`, `ActualSpend`, `RemainingBudget`) MUST be `decimal` in C# and
-  `numeric` in PostgreSQL. `double`/`float` are forbidden for money.
-- Transaction dates MUST be explicit date types (`date`/`timestamptz`), never `text`.
-- "Next business day" and `ParentCategory/Subcategory` parsing MUST each have exactly one
-  implementation, reused everywhere.
-- Deletes MUST be soft (`IsDeleted`/`DeletedAt`) and hidden by a global query filter; bypassing
-  it (`IgnoreQueryFilters`) is allowed only in explicit administrative code.
-- Destructive operations MUST require an explicit `confirm = true`, rejected by validation
-  otherwise.
-- Per-status timestamps MUST be stamped once on entering the status and never overwritten.
-- Budget calculations MUST follow `specs/domain/business-rules.md` exactly; changing a rule means
-  changing that doc first.
+- Money MUST be `decimal` in C# and `numeric` in PostgreSQL. `double`/`float` are forbidden for
+  money.
+- Dates MUST be stored as date/time types, never as text.
+- Deletes MUST be soft and hidden by default from every query; reading deleted data is allowed
+  only in explicit administrative code.
+- Destructive operations follow a two-step `needsConfirm` flow:
+  - The tool, not the caller, decides whether an operation is destructive.
+  - A call without explicit confirmation MUST NOT change any data. It returns
+    `needsConfirm: true` with a short summary of what would happen.
+  - Only a second call carrying the explicit confirmation executes the operation.
+  - The caller (e.g. Claude) MUST get the user's approval between the two calls.
+- Budget and balance calculations MUST follow `specs/domain/business-rules.md` exactly; changing
+  a rule means changing that doc first.
 
 Rationale: these are the invariants that keep reported balances and budgets correct.
 
-### VI. Explicit Contracts and Security Boundaries
+### VII. Explicit Contracts and Security Boundaries
 
-- Domain entities MUST NOT cross the network; every MCP/REST/SignalR response is a DTO/record.
-- Every write MUST be validated by FluentValidation (via `ValidationBehavior`) before persisting,
-  including source-format checks on import (`;` separator, `dd/mm/yyyy`, dot-decimal).
-- MCP tool contracts (parameter names, enum integer mappings, response shapes) are public API:
-  a breaking change MUST be documented in `mcp-tools.md` and called out in the feature spec.
-- Every request (REST and MCP) MUST carry `X-Account-Group`, except infra/docs routes.
-  `Group` and `Kind` MUST be stamped server-side, never accepted from the caller.
-- Auth is the custom JWT provider only. Write and approval operations MUST be gated by scope.
-- Secrets, connection strings, ports, and URLs MUST NOT be hardcoded or committed; use
-  user-secrets/environment configuration and Aspire service discovery.
+- Domain entities MUST NOT cross the network; every MCP and REST response is a DTO.
+- Every write MUST be validated before anything is saved, including CSV imports.
+- MCP tool contracts (parameter names, value types, response shapes) are public API: a breaking
+  change MUST be documented in `mcp-tools.md` and called out in the feature spec.
+- Every MCP and REST call MUST carry `X-Account-Group`. It defines which accounts — and therefore
+  which data — the call can see (Principle II). A missing or blank header MUST be rejected with
+  `400` before any handler runs. Exempt routes: infrastructure (health checks, API docs) and
+  authentication (`/auth/token`, `/auth/refresh`).
+- Authentication uses the custom JWT provider. Tokens MAY be issued by another system that knows
+  nothing about groups, so the JWT MUST NOT carry or depend on a group.
+- Secrets (such as the JWT signing key), connection strings, ports, and URLs MUST NOT be
+  hardcoded or committed; use user-secrets locally, environment configuration in production, and
+  Aspire service discovery between services.
 
 Rationale: clear contracts let Claude call the tools safely; clear boundaries keep data isolated.
 
-### VII. Simplicity and Maintainability
+### VIII. Simplicity and Maintainability
 
-- Nullable reference types MUST be enabled; new code MUST NOT introduce compiler warnings.
-- Code MUST follow the house style: file-scoped namespaces, `async`/`await` with `Async` suffix for
-  I/O, PascalCase in C#, camelCase on the wire, English domain names.
+- New code MUST NOT introduce compiler warnings.
 - Build only what a spec asks for (YAGNI). Any added project, abstraction, pattern, or dependency
-  beyond the standard layout MUST be justified in the plan's Complexity Tracking table.
-- Each change SHOULD be small and focused on one feature/task; unrelated refactors go in their
-  own change.
-- Logging goes through `LoggingBehavior`/OpenTelemetry and MUST NOT include tokens, credentials,
-  or full statement contents.
-- Applied EF Core migrations MUST NOT be edited; create a new migration instead. Data remaps
-  carry their own SQL steps.
+  beyond the solution layout in `CLAUDE.md` MUST be justified in the plan's Complexity Tracking
+  table.
+- Each change SHOULD be small and focused on one feature or task; unrelated refactors go in
+  their own change.
+- Logs MUST NOT include tokens, credentials, or full statement contents.
+- EF Core migrations already applied to a shared database MUST NOT be edited; create a new
+  migration instead.
 
 Rationale: a small, consistent codebase stays cheap to change and easy for Claude to read.
 
 ## Technology and Architecture Constraints
 
-- Stack: .NET 10, .NET Aspire (AppHost + ServiceDefaults), ASP.NET Core, MCP over the API host,
-  PostgreSQL via EF Core + Npgsql, MediatR, FluentValidation, xUnit-style tests.
-- Layering: `Api` → `Application` → `Domain`; `Infrastructure` implements `Application`
-  interfaces. `Domain` MUST NOT reference EF Core, ASP.NET Core, or any infrastructure package.
-- MediatR registration lives in `Application`, never in `Api`.
-- Package versions are centralized in `Directory.Packages.props`; project files MUST NOT pin
-  their own versions.
-- Health (`/health`, `/alive`) and telemetry come from `ServiceDefaults`, referenced by every
-  service project.
+- Stack: .NET 10, .NET Aspire, PostgreSQL via EF Core, MediatR, custom JWT, MCP and REST served
+  by the same API host.
+- Layering follows the solution layout in `CLAUDE.md`: `Api` → `Application` → `Domain`;
+  `Infrastructure` implements what `Application` needs. `Domain` MUST NOT reference EF Core,
+  ASP.NET Core, or any infrastructure package.
+- Health checks, telemetry, and resilience come from `MymoneyMcp.ServiceDefaults`, referenced by
+  every service project.
 
 ## Development Workflow and Quality Gates
 
@@ -153,22 +190,24 @@ A feature MAY be set to `Status: Implemented` only when all gates pass:
 
 1. Every acceptance criterion in `spec.md` is checked and every task in `tasks.md` is done.
 2. `dotnet build` succeeds with no new warnings, and `dotnet test` is fully green.
-3. Each new rule, validator, and handler path has tests (Principle III), and Principle IV's
-   real-PostgreSQL rule is satisfied where it applies.
-4. The plan's Constitution Check passes, or each violation is justified in Complexity Tracking.
-5. Domain docs are updated (Principle I) and `specs/backlog.md` reflects the new state.
-6. Review (human or `/code-review`) confirms thin edges, DTO-only responses, and no secrets.
+3. Each new rule, validator, and handler path has tests (Principle IV), with real-PostgreSQL
+   tests where Principle V requires them.
+4. Each new query or command has a cross-group isolation test (Principle II).
+5. The plan's Constitution Check passes, or each violation is justified in Complexity Tracking.
+6. Domain docs are updated (Principle I) and `specs/backlog.md` reflects the new state.
+7. Review (human or `/code-review`) confirms thin edges, DTO-only responses, and no secrets.
 
 ## Governance
 
 - This constitution overrides any other practice or guide in the repo. `CLAUDE.md` and the specs
   provide runtime guidance and MUST NOT contradict it.
-- Amendments are made through `/speckit-constitution`, with a Sync Impact Report, and are committed
-  as a separate `docs:` change.
+- Amendments MAY be made by editing this file directly or through `/speckit-constitution`.
+  Either way, each amendment MUST bump the version, set **Last Amended**, add a Sync Impact
+  Report, and be committed as a separate `docs:` change.
 - Versioning follows semantic versioning: MAJOR for removing or redefining a principle, MINOR for
   a new principle/section or materially expanded guidance, PATCH for wording and clarifications.
 - Every `plan.md` MUST include a Constitution Check; `/speckit-analyze` and reviews MUST flag
   violations. An unjustified violation blocks the feature.
 - Compliance is reviewed whenever a feature is closed and at least on every MINOR/MAJOR amendment.
 
-**Version**: 1.0.0 | **Ratified**: 2026-10-10 | **Last Amended**: 2026-10-10
+**Version**: 2.0.0 | **Ratified**: 2026-10-10 | **Last Amended**: 2026-10-10

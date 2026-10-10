@@ -27,7 +27,7 @@ dotnet run --project src/MymoneyMcp.AppHost   # backend + Aspire dashboard
 dotnet build
 dotnet test
 dotnet tool restore                              # pins dotnet-ef to EF Core 10
-dotnet ef migrations add <Name> --project src/MymoneyMcp.Infrastructure.Persistence --startup-project src/FinancialMcp.Api
+dotnet ef migrations add <Name> --project src/MymoneyMcp.Infrastructure.Persistence --startup-project src/MymoneyMcp.Api
 ```
 
 ## Solution layout
@@ -53,7 +53,7 @@ tests/
 4. **Tasks** → `tasks.md` (small steps, in order, that you can check).
 5. **Implement** → read `spec.md` + `plan.md` + the constitution, then do the steps in `tasks.md`.
 
-Templates: [`specs/_templates/`](specs/_templates/).
+Templates: [`.specify/templates/`](.specify/templates/).
 
 ## Before you finish a feature
 
