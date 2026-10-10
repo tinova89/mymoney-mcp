@@ -87,7 +87,7 @@ health route and the MCP server.
 
 - Header with leading/trailing spaces or different letter case (see Assumptions).
 - Header present but naming a group that has no accounts: empty results, not an error.
-- Database unavailable at startup: the health route reports unhealthy instead of the API crashing.
+- Database lost after startup: health reports unhealthy, liveness stays OK, the API keeps running.
 
 ## Requirements *(mandatory)*
 

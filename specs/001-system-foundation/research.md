@@ -84,6 +84,10 @@ Source of each decision: **Repo** = this repo's `CLAUDE.md`/`README.md`/constitu
 - **Decision**: AppHost provisions PostgreSQL (`AddPostgres("mymoneymcp-postgres")
   .AddDatabase("mymoneymcp-db")`, names from README). The API applies pending EF Core migrations
   at startup.
+- **Failure**: fail fast — if the database is unreachable or a migration fails at startup, the
+  API stops with the error logged. PostgreSQL rolls the failed migration back, so the schema stays
+  on the previous version. Losing the database **after** startup does not stop the API: `/health`
+  reports unhealthy (traffic stops), `/alive` stays OK, and traffic returns when it recovers.
 - **Alternatives**: separate Aspire migration worker — rejected for now: an extra project
   (Constitution VIII) for a single-instance family app.
 

@@ -38,7 +38,7 @@ forbidden in Production
 | Principle | How this plan complies | Status |
 |---|---|---|
 | I. Specs first, concise | Spec 150 lines; this plan under 200; closing doc tasks listed below | ✅ |
-| II. Accounts are the root | `Account.Group` + named filter `"AccountGroup"`; index on `group`; other group → 404; cross-group tests | ✅ |
+| II. Accounts are the root | `Account.Group` + named filter `"AccountGroup"`; index on `group`; other group → 404; cross-group tests (T017). `IssueTokenCommand`/`RefreshTokenCommand` need no cross-group test: they run before any group is known (`/auth/*` is header-exempt) and read/write only `refresh_tokens`, which is not account-owned | ✅ |
 | III. Thin edges, CQRS | `/auth/token` and `/auth/refresh` send `IssueTokenCommand`/`RefreshTokenCommand`; `ValidationBehavior` before handlers | ✅ |
 | IV. Test-backed | Unit tests for validators, token service, startup guard; integration tests for every acceptance scenario | ✅ |
 | V. Real engine | Isolation and refresh rotation tested on Testcontainers PostgreSQL; MCP tested through the real host | ✅ |
