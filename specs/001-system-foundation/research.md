@@ -49,8 +49,8 @@ Source of each decision: **Repo** = this repo's `CLAUDE.md`/`README.md`/constitu
 
 - **Decision**: order is `UseAuthentication` → `UseAuthorization` → `RequireAccountGroup` →
   endpoints. Unauthenticated calls get `401` first; authenticated calls without the header get
-  `400` (`application/problem+json`). Exempt path prefixes: `/health`, `/alive`, `/openapi`,
-  `/auth/`.
+  `400` (`application/problem+json`). Exempt: path prefixes `/health`, `/alive`, `/openapi`, and the exact
+  routes `/auth/token`, `/auth/refresh`.
 - **Rationale**: an anonymous caller learns nothing about header rules; matches spec US3.
 
 ## R7. Token issuance — own issuer (Spec FR-006/007, Proposed credentials)

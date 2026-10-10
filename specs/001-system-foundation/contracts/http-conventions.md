@@ -7,7 +7,7 @@
 | `Authorization: Bearer <jwt>` | everything except exempt routes | Not required when `Auth:Enabled=false` (non-production only). |
 | `X-Account-Group: <group>` | everything except exempt routes | Trimmed; case-sensitive. |
 
-Exempt routes: `/health`, `/alive`, `/openapi/*`, `/auth/*`.
+Exempt routes: `/health`, `/alive`, `/openapi/*`, `/auth/token`, `/auth/refresh`.
 
 ## Check order and errors
 

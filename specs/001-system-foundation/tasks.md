@@ -79,9 +79,9 @@ tests first and see them fail before implementing.
 
 - [ ] T025 [P] [US2] `tests/MymoneyMcp.Application.Tests/Auth/IssueTokenCommandValidatorTests.cs` and `RefreshTokenCommandValidatorTests.cs`: blank `clientId`, `clientSecret`, `refreshToken` rejected
 - [ ] T026 [P] [US2] `tests/MymoneyMcp.Application.Tests/Auth/IssueTokenCommandHandlerTests.cs` and `RefreshTokenCommandHandlerTests.cs` with fakes: unknown client and wrong secret give the same `401` error; refresh revokes the old token and returns a new pair
-- [ ] T027 [P] [US2] `tests/MymoneyMcp.Api.Tests/Auth/AuthApiTests.cs`: `POST /auth/token` without group header → `200` + `TokenResponse`; bad secret → `401`; blank field → `400`; `POST /auth/refresh` once → `200`, reuse same token → `401`; JWT has no group claim; error responses and captured logs never contain the `clientSecret` or `refreshToken` values sent (contracts/auth-api.md)
+- [ ] T027 [P] [US2] `tests/MymoneyMcp.Api.Tests/Auth/AuthApiTests.cs`: `POST /auth/token` without group header → `200` + `TokenResponse`; bad secret → `401`; blank field → `400`; `POST /auth/refresh` once → `200`, reuse same token → `401`; two concurrent refreshes with the same token on PostgreSQL → exactly one `200`, the other `401`; JWT has no group claim; error responses and captured logs never contain the `clientSecret` or `refreshToken` values sent (contracts/auth-api.md)
 - [ ] T028 [P] [US2] `tests/MymoneyMcp.Api.Tests/Auth/ProtectedRouteTests.cs` on `/mcp` with the group header: no token → `401`; expired token → `401`; valid own token → accepted; token signed by a test external issuer (test OIDC metadata + key) → accepted; `/health`, `/alive`, `/openapi/v1.json` with no token → not `401` (spec US2 scenarios 1, 4; FR-005 exemptions)
-- [ ] T029 [P] [US2] `tests/MymoneyMcp.Api.Tests/Auth/AuthDisabledTests.cs`: `Auth:Enabled=false` in `Development` → `/mcp` with header and no token accepted, startup warning logged; in `Production` → host startup throws (spec US2 scenario 5, FR-014)
+- [ ] T029 [P] [US2] `tests/MymoneyMcp.Api.Tests/Auth/AuthDisabledTests.cs`: `Auth:Enabled=false` in `Development` → `/mcp` with header and no token accepted, startup warning logged; in `Production` → host startup throws; auth disabled and no `X-Account-Group` header → `400` (header still required); auth enabled with `Jwt:SigningKey` missing or shorter than 32 bytes → host startup throws (spec US2 scenario 5, FR-013, FR-014)
 
 ### Implementation
 
@@ -90,11 +90,11 @@ tests first and see them fail before implementing.
 - [ ] T032 [US2] Add migration `AddRefreshTokens` in `src/MymoneyMcp.Infrastructure.Data/Migrations/` (same command as T023)
 - [ ] T033 [P] [US2] `src/MymoneyMcp.Application/Common/Interfaces/ITokenService.cs` (create access token, create/hash refresh token) and `IClientCredentialStore.cs` (constant-time secret check)
 - [ ] T034 [US2] `src/MymoneyMcp.Application/Auth/IssueToken/`: `IssueTokenCommand`, `IssueTokenCommandValidator`, `IssueTokenCommandHandler`, `TokenResponse` (`accessToken`, `tokenType`, `expiresIn`, `refreshToken`); never log `clientSecret`, `refreshToken`, or issued tokens (Constitution VIII)
-- [ ] T035 [US2] `src/MymoneyMcp.Application/Auth/RefreshToken/`: `RefreshTokenCommand`, validator, handler — revoke the used row and insert the new one in the same database transaction
+- [ ] T035 [US2] `src/MymoneyMcp.Application/Auth/RefreshToken/`: `RefreshTokenCommand`, validator, handler — revoke the used row with a conditional update (`UPDATE ... SET RevokedAt = now WHERE Id = @id AND RevokedAt IS NULL`); if 0 rows are affected, return `401`; insert the new row in the same database transaction
 - [ ] T036 [P] [US2] `src/MymoneyMcp.Infrastructure.Auth/JwtTokenService.cs` (HMAC-SHA256; claims `sub`, `iss`, `aud`, `iat`, `exp`; defaults 60 min access / 14 days refresh), `ClientCredentialStore.cs` (reads `Auth:Clients`), `JwtOptions.cs`, `DependencyInjection.cs`
 - [ ] T037 [US2] `src/MymoneyMcp.Api/Auth/AuthEndpoints.cs`: `POST /auth/token` and `POST /auth/refresh`, thin (build command → `IMediator.Send`), anonymous
 - [ ] T038 [US2] In `src/MymoneyMcp.Api/Program.cs`: bearer schemes `Local` and optional `External` (`Auth:External:Authority`/`Audience`), policy scheme choosing by `iss`; fallback policy requires an authenticated user unless `Auth:Enabled=false`; mark `/health`, `/alive` (from `MapDefaultEndpoints`) and `/openapi` (from `MapOpenApi`) with `AllowAnonymous()` so the fallback policy does not apply to them (spec FR-005 exemptions); `UseAuthentication` → `UseAuthorization` (research R6–R9)
-- [ ] T039 [US2] `src/MymoneyMcp.Api/Auth/AuthStartupGuard.cs`: `Auth:Enabled=false` + `IsProduction()` → throw at startup; otherwise log a warning when disabled
+- [ ] T039 [US2] `src/MymoneyMcp.Api/Auth/AuthStartupGuard.cs`: `Auth:Enabled=false` + `IsProduction()` → throw at startup; otherwise log a warning when disabled. When auth is enabled, `Jwt:SigningKey` missing or shorter than 32 bytes → throw at startup (FR-013)
 - [ ] T040 [US2] Run `tests/MymoneyMcp.Application.Tests/Auth/` and `tests/MymoneyMcp.Api.Tests/Auth/` (T025–T029) and confirm green
 
 **Checkpoint**: tokens issued, refreshed, validated, and switchable off only outside production.
@@ -112,7 +112,7 @@ tests first and see them fail before implementing.
 
 ### Implementation
 
-- [ ] T042 [US3] `src/MymoneyMcp.Api/Common/RequireAccountGroupMiddleware.cs`: exempt prefixes `/health`, `/alive`, `/openapi`, `/auth/`; missing/blank → `400` `application/problem+json`
+- [ ] T042 [US3] `src/MymoneyMcp.Api/Common/RequireAccountGroupMiddleware.cs`: exempt prefixes `/health`, `/alive`, `/openapi` and the exact routes `/auth/token`, `/auth/refresh` (Constitution VII; any other `/auth/*` route still needs the header); missing/blank → `400` `application/problem+json`
 - [ ] T043 [US3] In `src/MymoneyMcp.Api/Program.cs`: register the middleware after `UseAuthorization` and before endpoints; add `AddOpenApi()` + `MapOpenApi()` (Development only)
 - [ ] T044 [US3] Run `tests/MymoneyMcp.Api.Tests/AccountGroup/RequireAccountGroupTests.cs` (T041) and confirm green
 
