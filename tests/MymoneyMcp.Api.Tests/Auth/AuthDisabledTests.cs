@@ -36,10 +36,11 @@ public sealed class AuthDisabledTests(PostgresFixture postgres)
         Assert.Contains("Production", Flatten(error));
     }
 
+    // "" (not null) so the test overrides any key from the developer's user-secrets.
     [Theory]
-    [InlineData(null)]
+    [InlineData("")]
     [InlineData("too-short")]
-    public async Task Missing_or_short_signing_key_stops_startup_when_enabled(string? signingKey)
+    public async Task Missing_or_short_signing_key_stops_startup_when_enabled(string signingKey)
     {
         await using var factory = new ApiFactory(postgres.NewDatabaseConnectionString());
         factory.Settings["Jwt:SigningKey"] = signingKey;

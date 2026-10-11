@@ -3,6 +3,8 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <UserSecretsId>mymoneymcp-apphost</UserSecretsId>
+    <!-- Aspire CLI bundle: DCP and dashboard come from the Aspire CLI, and `dotnet run`, VS Code
+         (Aspire extension) and `aspire run` all go through the CLI. -->
     <AspireUseCliBundle>true</AspireUseCliBundle>
   </PropertyGroup>
 
