@@ -28,3 +28,24 @@ dotnet user-secrets set "Auth:Clients:0:ClientSecret" "<secret>"
 | 7 | Set `Auth:Enabled=false`, environment `Development`; call `/mcp` with header only | accepted; startup log has a warning | US2, FR-014 |
 | 8 | Set `Auth:Enabled=false`, environment `Production`; start the API | startup fails | FR-014 |
 | 9 | `dotnet test` | all green, including cross-group isolation tests | US1, SC-001 |
+
+## Validation record (2026-10-10)
+
+Every scenario is covered by an automated test that runs the real host (`WebApplicationFactory` or
+the Aspire AppHost) against real PostgreSQL. `dotnet test MymoneyMcp.slnx`: **58 passed, 0 failed**.
+
+| # | Result | Evidence |
+|---|---|---|
+| 1 | ✅ | `AppHostSmokeTests` (AppHost starts PostgreSQL + API, `/health` 200), `HealthTests` |
+| 2 | ✅ | `AuthApiTests.Token_is_issued_without_the_group_header` |
+| 3 | ✅ | `AuthApiTests.Refresh_works_once_and_reuse_is_401`, `Concurrent_refreshes_...` |
+| 4 | ✅ | `ProtectedRouteTests.No_token_is_401` |
+| 5 | ✅ | `RequireAccountGroupTests.Missing_header_is_400_with_the_contract_title` |
+| 6 | ✅ | `McpEndpointTests.Client_connects_and_the_server_lists_no_tools` |
+| 7 | ✅ | `AuthDisabledTests.Disabled_outside_production_accepts_calls_without_a_token_and_warns` |
+| 8 | ✅ | `AuthDisabledTests.Disabled_in_production_stops_startup` |
+| 9 | ✅ | full suite green, including `AccountGroupIsolationTests` |
+
+Scenario 1 was not run by hand with `dotnet run`, because that needs the developer's own
+user-secrets; the AppHost smoke test runs the same path with the signing key passed as an
+environment variable.

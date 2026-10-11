@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MymoneyMcp.Api/MymoneyMcp.Api.csproj" />
+    <Project Path="src/MymoneyMcp.AppHost/MymoneyMcp.AppHost.csproj" />
+    <Project Path="src/MymoneyMcp.Application/MymoneyMcp.Application.csproj" />
+    <Project Path="src/MymoneyMcp.Domain/MymoneyMcp.Domain.csproj" />
+    <Project Path="src/MymoneyMcp.Infrastructure.Auth/MymoneyMcp.Infrastructure.Auth.csproj" />
+    <Project Path="src/MymoneyMcp.Infrastructure.Data/MymoneyMcp.Infrastructure.Data.csproj" />
+    <Project Path="src/MymoneyMcp.ServiceDefaults/MymoneyMcp.ServiceDefaults.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/MymoneyMcp.Api.Tests/MymoneyMcp.Api.Tests.csproj" />
+    <Project Path="tests/MymoneyMcp.Application.Tests/MymoneyMcp.Application.Tests.csproj" />
+  </Folder>
+</Solution>

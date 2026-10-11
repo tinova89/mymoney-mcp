@@ -8,7 +8,7 @@ O projeto segue **Spec-Driven Development (SDD)**: a fonte de verdade para arqui
 
 - .NET 10 SDK (ver `global.json`) com suporte a `.slnx` (formato nativo a partir do SDK 9.0.200+).
 - Docker (ou outro provedor de containers compatível com Aspire) — usado pelo `AddPostgres` no `AppHost` para subir o Postgres localmente.
-- Workload do Aspire: `dotnet workload install aspire` (se ainda não instalado).
+- Aspire 13 vem como pacote NuGet (`Aspire.AppHost.Sdk`); não é preciso instalar workload.
 
 ## Abrir a solução
 
@@ -24,24 +24,44 @@ dotnet run --project src/MymoneyMcp.AppHost
 
 O AppHost provisiona o Postgres (`mymoneymcp-postgres` / banco `mymoneymcp-db`), injeta a connection string na API por service discovery, e abre o Aspire dashboard.
 
-## Configurar o segredo do JWT (obrigatório antes do primeiro `dotnet run`)
+## Configurar segredos e clients (obrigatório antes do primeiro `dotnet run`)
+
+O projeto `MymoneyMcp.Api` já tem `UserSecretsId`; não é preciso rodar `user-secrets init`.
 
 ```bash
 cd src/MymoneyMcp.Api
-dotnet user-secrets init
 dotnet user-secrets set "Jwt:SigningKey" "<uma-chave-aleatoria-de-pelo-menos-32-bytes>"
+dotnet user-secrets set "Auth:Clients:0:ClientId" "claude-code"
+dotnet user-secrets set "Auth:Clients:0:ClientSecret" "<um-secret-forte>"
 ```
 
-Sem esse segredo, `AddJwtBearer` sobe com uma chave vazia (apenas para não quebrar o boot local) — **nunca** rodar assim fora do ambiente de desenvolvimento.
+Com a verificação de token ligada (padrão), a API **não sobe** sem `Jwt:SigningKey` de pelo menos 32 bytes.
 
-## Migration inicial do EF Core
+## Configurações de autenticação
+
+| Chave | Padrão | Uso |
+|---|---|---|
+| `Jwt:SigningKey` | — | Chave HMAC dos tokens emitidos pelo sistema (segredo). |
+| `Jwt:Issuer` / `Jwt:Audience` | `mymoney-mcp` | `iss`/`aud` dos tokens próprios. |
+| `Jwt:AccessTokenMinutes` / `Jwt:RefreshTokenDays` | `60` / `14` | Validade dos tokens. |
+| `Auth:Clients:N:ClientId` / `ClientSecret` | — | Clients aceitos em `POST /auth/token` (segredo). |
+| `Auth:Enabled` | `true` | `false` desliga a verificação de token. **Proibido em Production**: a API se recusa a subir. O header `X-Account-Group` continua obrigatório. |
+| `Auth:External:Authority` / `Audience` / `Issuer` | — | Emissor externo confiável (OIDC). Desligado se `Authority` estiver vazio. |
+
+Toda chamada MCP/REST precisa de `Authorization: Bearer <token>` e `X-Account-Group: <grupo>`. Isentas: `/health`, `/alive`, `/openapi` (só em Development) e `/auth/token`, `/auth/refresh` (contrato: [`specs/001-system-foundation/contracts/`](specs/001-system-foundation/contracts/)).
+
+## Migrations do EF Core
+
+A API aplica as migrations pendentes ao subir; se o banco estiver inacessível ou uma migration falhar, ela para com o erro no log. Para criar uma migration nova:
 
 ```bash
-dotnet ef migrations add InitialCreate --project src/MymoneyMcp.Infrastructure.Data --startup-project src/MymoneyMcp.Api
-dotnet ef database update --project src/MymoneyMcp.Infrastructure.Data --startup-project src/MymoneyMcp.Api
+dotnet tool restore
+dotnet ef migrations add <Nome> --project src/MymoneyMcp.Infrastructure.Data --startup-project src/MymoneyMcp.Api
 ```
 
 ## Rodar testes
+
+Os testes de integração sobem PostgreSQL real com Testcontainers, então o **Docker precisa estar rodando**.
 
 ```bash
 dotnet test MymoneyMcp.slnx

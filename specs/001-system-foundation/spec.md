@@ -1,6 +1,6 @@
 # Feature Specification: System Foundation
 
-**Feature Branch**: `001-system-foundation` | **Created**: 2026-10-10 | **Status**: Draft
+**Feature Branch**: `001-system-foundation` | **Created**: 2026-10-10 | **Status**: Implemented
 
 **Input**: User description: "Fundação do sistema: estrutura da solução, Postgres via Aspire, account como raiz dos dados com isolamento por X-Account-Group, autenticação JWT e host MCP sem tools de negócio."
 
