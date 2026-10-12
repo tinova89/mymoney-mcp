@@ -1,14 +1,16 @@
 <!--
 Sync Impact Report
-- Version change: 2.1.0 → 2.2.0 (MINOR: materially expanded guidance)
-- Modified sections:
-  - Technology and Architecture Constraints — infrastructure is split into one
-    `MymoneyMcp.Infrastructure.<Concern>` project per concern (e.g. `.Data`, `.Auth`, future
-    `.Import`); infrastructure projects do not reference each other.
-- Principles: unchanged. A new `Infrastructure.<Concern>` project follows the convention, so it
-  does not need a Complexity Tracking entry (Principle VIII) unless it breaks the convention.
+- Version change: 2.2.0 → 2.3.0 (MINOR: materially expanded guidance)
+- Modified principles:
+  - II. Accounts Are the Root of All Data — the group comes from the header or, for MCP, the URL.
+  - V. Test Against the Real Engine — MCP integration tests cover the group in header and URL.
+  - VII. Explicit Contracts and Security Boundaries — MCP calls may name the group in the URL
+    (`/mcp/<group>`); both sources feed one per-request context, never cached; URL/header
+    mismatch is `400`; public authorization metadata is exempt; external OAuth issuer example.
+- Added/removed sections: none.
 - Templates: not modified.
-- Follow-up TODOs: none.
+- Follow-up TODOs: BR-10/BR-11 in `specs/domain/business-rules.md` change when 002 is
+  implemented (docs describe current behavior).
 -->
 
 # MymoneyMcp Constitution
@@ -49,8 +51,9 @@ wrong code.
 
 - The account is the top of the data hierarchy. Transactions, categories, and budgets exist only
   under accounts, and a request can see them only through an account it is allowed to see.
-- The set of visible accounts is defined by the request's `X-Account-Group` header: a request
-  sees only the accounts of that group, and only the data below them:
+- The set of visible accounts is defined by the request's account group, taken from the
+  `X-Account-Group` header or, for MCP, from the MCP URL (Principle VII): a request sees only the
+  accounts of that group, and only the data below them:
   - transactions of those accounts;
   - categories used by those transactions;
   - budgets of that group.
@@ -109,7 +112,7 @@ Rationale: this system reports family money; an untested rule is an unverified n
 - Money totals SHOULD be summed in C# `decimal`; when a total is computed in SQL, it MUST have
   a real-PostgreSQL test.
 - Each MCP tool MUST have an integration test that goes through the real host: authentication,
-  the `X-Account-Group` header, and request/response serialization.
+  the account group (header and MCP URL), and request/response serialization.
 
 Rationale: each test engine proves only what it actually runs; money and isolation rules must be
 proven on the database that runs in production.
@@ -138,12 +141,20 @@ Rationale: these are the invariants that keep reported balances and budgets corr
 - Every write MUST be validated before anything is saved, including CSV imports.
 - MCP tool contracts (parameter names, value types, response shapes) are public API: a breaking
   change MUST be documented in `mcp-tools.md` and called out in the feature spec.
-- Every MCP and REST call MUST carry `X-Account-Group`. It defines which accounts — and therefore
-  which data — the call can see (Principle II). A missing or blank header MUST be rejected with
-  `400` before any handler runs. Exempt routes: infrastructure (health checks, API docs) and
-  authentication (`/auth/token`, `/auth/refresh`).
+- Every MCP and REST call MUST name its account group. It defines which accounts — and therefore
+  which data — the call can see (Principle II):
+  - REST calls carry it in the `X-Account-Group` header.
+  - MCP calls carry it in the header, in the MCP URL (`/mcp/<group>`), or both; clients that
+    cannot send headers (e.g. claude.ai connectors) use the URL.
+  - Both sources MUST feed the same per-request group context; a group MUST NOT be remembered
+    across requests.
+  - A missing or blank group, or a URL group and header that disagree, MUST be rejected with
+    `400` before any handler runs.
+  - Exempt routes: infrastructure (health checks, API docs), authentication (`/auth/token`,
+    `/auth/refresh`), and the public authorization metadata clients need to sign in.
 - Authentication uses the custom JWT provider. Tokens MAY be issued by another system that knows
-  nothing about groups, so the JWT MUST NOT carry or depend on a group.
+  nothing about groups (e.g. the OAuth issuer claude.ai signs in with), so the JWT MUST NOT carry
+  or depend on a group.
 - Secrets (such as the JWT signing key), connection strings, ports, and URLs MUST NOT be
   hardcoded or committed; use user-secrets locally, environment configuration in production, and
   Aspire service discovery between services.
@@ -205,4 +216,4 @@ A feature MAY be set to `Status: Implemented` only when all gates pass:
   violations. An unjustified violation blocks the feature.
 - Compliance is reviewed whenever a feature is closed and at least on every MINOR/MAJOR amendment.
 
-**Version**: 2.2.0 | **Ratified**: 2026-10-10 | **Last Amended**: 2026-10-10
+**Version**: 2.3.0 | **Ratified**: 2026-10-10 | **Last Amended**: 2026-10-12
