@@ -36,7 +36,7 @@
 - MCP URL, `X-Account-Group`, `400`/`401`, and OAuth sign-in are named because they are the
   product's external interface (as in 001), not implementation choices. The protected-resource
   metadata mechanism and routing are left for `plan.md`.
-- FR-015 is a gate: the constitution (Principle VII) and BR-10 must be amended in a separate
-  `docs:` change before the plan is approved.
+- Constitution amended to v2.3.0 (2026-10-12). BR-10/BR-11 change with the code (FR-015),
+  because `business-rules.md` describes current behavior (Principle I).
 - 2026-10-12: added the `whogroupami` diagnostic tool (User Story 3, FR-009, FR-010): available in
   every environment, returns group, source, issuer, and visible-account count.

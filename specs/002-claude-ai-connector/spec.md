@@ -120,7 +120,7 @@ server's published authorization details, which name the external issuer.
 - **FR-012**: An unauthenticated call to any MCP URL MUST get `401` pointing to those details.
 - **FR-013**: The authentication rules of 001 (BR-20 to BR-26) MUST stay unchanged; tokens carry no group.
 - **FR-014**: Any authenticated caller MAY use any group via the URL (BR-07); it is not a security boundary.
-- **FR-015**: Before implementation, Constitution Principle VII and BR-10 MUST be amended to accept the URL group.
+- **FR-015**: BR-10 and BR-11 MUST be updated to the URL group when this feature is implemented.
 
 ### Key Entities
 
@@ -147,4 +147,4 @@ server's published authorization details, which name the external issuer.
   deployment. It handles sign-in and client registration; this server only points to it and
   validates its tokens.
 - `whogroupami` is a diagnostic tool, not a business tool.
-- The constitution amendment is a separate `docs:` change made before `plan.md` is approved.
+- Constitution v2.3.0 (Principles II, V, VII) already allows the group in the MCP URL.
