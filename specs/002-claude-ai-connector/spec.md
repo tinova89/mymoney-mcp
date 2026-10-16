@@ -138,7 +138,7 @@ server's published authorization details, which name the external issuer.
   return that group in under 5 minutes, with no header or static token.
 - **SC-002**: In the test suite, 100% of calls through a group URL return zero records from another group.
 - **SC-003**: 100% of calls with a blank or disagreeing URL group are rejected before any data is read.
-- **SC-004**: All 001 tests for the header and authentication pass unchanged.
+- **SC-004**: All 001 header and authentication tests pass unchanged; only `tools/list` gains `whogroupami`.
 
 ## Assumptions
 
