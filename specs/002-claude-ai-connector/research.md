@@ -48,9 +48,9 @@ this plan; **SDK** = verified in `ModelContextProtocol.AspNetCore` 2.2.0 (its XM
   - on challenge, answers `401` with `WWW-Authenticate: Bearer resource_metadata="<that URL>"`.
 - **Metadata values**: `authorization_servers = [Auth:External:Authority]`; `resource` set per
   request in `Events.OnResourceMetadataRequest` to the absolute URL of the requested MCP path,
-  because claude.ai checks it equals the connector URL; `bearer_methods_supported = ["header"]`.
+  built from the raw (still encoded) target, because claude.ai checks it equals the connector URL; `bearer_methods_supported = ["header"]`.
 - **Challenge only on MCP**: a second policy scheme `Challenge` becomes `DefaultChallengeScheme`;
-  it forwards to the MCP scheme for `/mcp` paths and to `Bearer` (001 behavior) for the rest, so
+  it forwards to the MCP scheme for paths under the `/mcp` segment (`StartsWithSegments`) and to `Bearer` (001 behavior) for the rest, so
   REST `401`s are unchanged (SC-004).
 - **Exempt**: `/.well-known` joins the group-exempt prefixes. The handler answers during
   `UseAuthentication`, before authorization and the group check.

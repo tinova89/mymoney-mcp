@@ -15,8 +15,9 @@ Published only when `Auth:External:Authority` is configured; anonymous, no group
 }
 ```
 
-- `resource` is the absolute URL of the requested MCP path (claude.ai compares it with the
-  connector URL).
+- `resource` is the absolute URL of the requested MCP path, with the group segment kept
+  percent-encoded exactly as the client sent it (claude.ai compares it with the connector URL as a
+  string): `/mcp/Fam%C3%ADlia`, never `/mcp/Família`.
 - The token audience is not per group: every MCP URL accepts `Auth:External:Audience` (spec FR-016).
 
 ## Sign-in flow (claude.ai)
