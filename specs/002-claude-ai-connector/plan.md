@@ -79,13 +79,13 @@ src/
     Diagnostics/WhoGroupAmI/            # query, handler, response
 tests/
   MymoneyMcp.Api.Tests/
-    AccountGroup/AccountGroupResolverTests.cs   # replaces HeaderAccountGroupContextTests
+    AccountGroup/AccountGroupResolverTests.cs   # new, unit
+    AccountGroup/RequestAccountGroupContextTests.cs # renamed from HeaderAccountGroupContextTests, same cases
     AccountGroup/UrlAccountGroupTests.cs        # US1, US2, edge cases
     Mcp/WhoAmIToolTests.cs                      # US3 (PostgreSQL, MCP client)
     Auth/OAuthMetadataTests.cs                  # US4, FR-016
     Mcp/McpEndpointTests.cs                     # tools/list now [whogroupami]
-  MymoneyMcp.Application.Tests/
-    Diagnostics/WhoGroupAmIQueryHandlerTests.cs # value mapping with fakes
+    Diagnostics/WhoGroupAmIQueryHandlerTests.cs # handler on PostgreSQL with fixed contexts
 ```
 
 **Structure Decision**: the `CLAUDE.md` layout; all HTTP concerns stay in `Api`, the tool's logic in
@@ -122,7 +122,7 @@ tests/
 | US4 sc. 2, FR-011 | Metadata route: anonymous, no header, `resource` + issuer; absent when external unset (Api) |
 | US4 sc. 3, FR-016 | External test token on `/mcp/A` and `/mcp/B`; local token on `/mcp/A` (Api) |
 | Edge cases | Encoded `/`, `/mcp/`, `/mcp/A/B` → `404`, unauthenticated + mismatch → `401` (resolver + Api) |
-| Handler | Enum → contract strings; count uses the filtered set (Application, fakes) |
+| Handler | Enum → contract strings; count uses the filtered set (Api, PostgreSQL: `DbSet` cannot be faked) |
 
 ## Closing Doc Tasks (Constitution I)
 
