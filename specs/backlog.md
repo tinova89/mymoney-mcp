@@ -1,6 +1,6 @@
 # Backlog
 
-`#` is the feature number: its spec folder is `specs/<#>-<name>/` (pass `-Number <#>` to `/speckit-specify`). `Depends on` lists the items that must be implemented first.
+`#` is the feature number: its spec folder is `specs/<#>-<name>/` (give it to `/speckit-specify` as `SPECIFY_FEATURE_DIRECTORY=specs/<#>-<name>`, or it numbers the folder after the highest existing one). `Depends on` lists the items that must be implemented first.
 
 | # | Feature | Status | Priority | Depends on | Notes |
 |---|---|---|---|---|---|
