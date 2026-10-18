@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using MymoneyMcp.Application.Common;
 using MymoneyMcp.Application.Common.Interfaces;
 
 namespace MymoneyMcp.Infrastructure.Data;
@@ -22,5 +23,7 @@ internal sealed class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<A
     private sealed class NoAccountGroup : IAccountGroupContext
     {
         public string Group => string.Empty;
+
+        public AccountGroupSource Source => AccountGroupSource.None;
     }
 }

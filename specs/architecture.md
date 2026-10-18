@@ -44,16 +44,30 @@ Package versions: `Directory.Packages.props` (MediatR pinned to 12.x, the last A
 | `Bearer` (policy) | — | Picks `External` when the token's `iss` matches the external issuer, else `Local` |
 | `Local` | Tokens issued by `/auth/token` | HMAC-SHA256, `Jwt:*` settings |
 | `External` | Trusted issuer tokens | OIDC discovery via `Auth:External:Authority`; registered only when configured |
+| MCP (`McpAuthenticationDefaults`) | — | SDK handler: serves RFC 9728 metadata and writes MCP challenges with `resource_metadata`; registered only with `External` (002) |
+| `Challenge` (policy) | — | Default challenge scheme with `External`: MCP scheme for paths under `/mcp`, `Bearer` otherwise (002) |
 
 - Fallback authorization policy requires an authenticated caller when `Auth:Enabled=true`.
+- Each bearer scheme stamps its name as the identity's `AuthenticationType`; `HttpCallerContext`
+  reads it as the token issuer (002).
 - Startup guard: auth off in Production, or auth on without a 32-byte signing key → startup fails.
 
 ## Request pipeline
 
 1. `UseExceptionHandler` — application exceptions → RFC 9457 problem details (no attempted values).
-2. `UseAuthentication` → `UseAuthorization` — `401` for missing/invalid tokens.
-3. `RequireAccountGroupMiddleware` — `400` when `X-Account-Group` is missing or blank.
-4. Endpoints: `/health`, `/alive`, `/openapi` (Development), `/auth/*`, `/mcp`.
+2. `UseAuthentication` → `UseAuthorization` — `401` for missing/invalid tokens. The MCP scheme
+   answers `/.well-known/oauth-protected-resource/*` here, before any group check.
+3. `RequireAccountGroupMiddleware` — `400` when the group is missing, the URL group is blank, or
+   URL and header disagree.
+4. Endpoints: `/health`, `/alive`, `/openapi` (Development), `/auth/*`, `/mcp`, `/mcp/{accountGroup}`.
+
+## Account group resolution (002)
+
+- `AccountGroupResolver` resolves once per request from the raw request target and the header;
+  the result lives in `HttpContext.Items` only. The middleware and the scoped
+  `RequestAccountGroupContext` (`IAccountGroupContext`) both read it.
+- MCP runs stateless Streamable HTTP, so no session can carry a group between calls.
+- MCP tools live in `Api/Mcp/Tools`, discovered by `WithToolsFromAssembly`.
 
 ## Testing
 

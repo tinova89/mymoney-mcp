@@ -3,12 +3,15 @@ using MymoneyMcp.Api.Tests.Infrastructure;
 
 namespace MymoneyMcp.Api.Tests.Mcp;
 
-/// <summary>contracts/mcp-endpoint.md — spec US4 / FR-010, through a real MCP client.</summary>
+/// <summary>
+/// 001 contracts/mcp-endpoint.md — spec US4 / FR-010, through a real MCP client. 002 adds the
+/// diagnostic tool <c>whogroupami</c>; there are still no business tools.
+/// </summary>
 [Collection(PostgresCollection.Name)]
 public sealed class McpEndpointTests(PostgresFixture postgres)
 {
     [Fact]
-    public async Task Client_connects_and_the_server_lists_no_tools()
+    public async Task Client_connects_and_the_server_lists_only_the_diagnostic_tool()
     {
         await using var factory = new ApiFactory(postgres.NewDatabaseConnectionString());
         var ct = TestContext.Current.CancellationToken;
@@ -31,6 +34,6 @@ public sealed class McpEndpointTests(PostgresFixture postgres)
         var tools = await client.ListToolsAsync(cancellationToken: ct);
 
         Assert.Equal("mymoney-mcp", client.ServerInfo.Name);
-        Assert.Empty(tools);
+        Assert.Equal("whogroupami", Assert.Single(tools).Name);
     }
 }

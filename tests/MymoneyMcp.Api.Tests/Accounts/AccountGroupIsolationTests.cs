@@ -1,6 +1,8 @@
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
+using MymoneyMcp.Api.Common;
 using MymoneyMcp.Api.Tests.Infrastructure;
-using MymoneyMcp.Application.Common.Interfaces;
 using MymoneyMcp.Domain.Accounts;
 using MymoneyMcp.Infrastructure.Data;
 
@@ -77,13 +79,41 @@ public sealed class AccountGroupIsolationTests(PostgresFixture postgres) : IAsyn
         Assert.Empty(accounts);
     }
 
+    [Theory]
+    [InlineData("/mcp/A")]
+    [InlineData("/mcp/%20A%20")]
+    public async Task A_group_url_without_the_header_sees_only_that_group(string rawTarget)
+    {
+        await using var db = CreateContextForRequest(rawTarget);
+
+        var ids = await db.Accounts.Select(a => a.Id).ToListAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(new[] { accountA1.Id, accountA2.Id }.Order(), ids.Order());
+    }
+
+    [Fact]
+    public async Task Another_group_url_sees_only_its_own_accounts()
+    {
+        await using var db = CreateContextForRequest("/mcp/B");
+
+        var ids = await db.Accounts.Select(a => a.Id).ToListAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal([accountB.Id], ids);
+    }
+
+    /// <summary>002 US1: the group comes from the request URL through the same context the host uses.</summary>
+    private AppDbContext CreateContextForRequest(string rawTarget)
+    {
+        var httpContext = new DefaultHttpContext();
+        httpContext.Features.Get<IHttpRequestFeature>()!.RawTarget = rawTarget;
+
+        return new(
+            new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(connectionString).Options,
+            new RequestAccountGroupContext(new HttpContextAccessor { HttpContext = httpContext }));
+    }
+
     private AppDbContext CreateContext(string group) =>
         new(
             new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(connectionString).Options,
             new FixedAccountGroup(group));
-
-    private sealed class FixedAccountGroup(string group) : IAccountGroupContext
-    {
-        public string Group => group;
-    }
 }

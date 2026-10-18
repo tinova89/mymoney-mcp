@@ -48,7 +48,81 @@ Com a verificação de token ligada (padrão), a API **não sobe** sem `Jwt:Sign
 | `Auth:Enabled` | `true` | `false` desliga a verificação de token. **Proibido em Production**: a API se recusa a subir. O header `X-Account-Group` continua obrigatório. |
 | `Auth:External:Authority` / `Audience` / `Issuer` | — | Emissor externo confiável (OIDC). Desligado se `Authority` estiver vazio. |
 
-Toda chamada MCP/REST precisa de `Authorization: Bearer <token>` e `X-Account-Group: <grupo>`. Isentas: `/health`, `/alive`, `/openapi` (só em Development) e `/auth/token`, `/auth/refresh` (contrato: [`specs/001-system-foundation/contracts/`](specs/001-system-foundation/contracts/)).
+Toda chamada MCP/REST precisa de `Authorization: Bearer <token>` e de um grupo: no REST, pelo header `X-Account-Group: <grupo>`; no MCP, pelo header ou pela URL `/mcp/<grupo>`. Isentas: `/health`, `/alive`, `/openapi` (só em Development), `/auth/token`, `/auth/refresh` e `/.well-known/*` (contratos: [`001`](specs/001-system-foundation/contracts/), [`002`](specs/002-claude-ai-connector/contracts/)).
+
+## Chamar o MCP localmente
+
+Com a API rodando (`dotnet run --project src/MymoneyMcp.AppHost`, ou o perfil `http` da Api em `http://localhost:5180`) e o client configurado acima:
+
+### 1. Pegar um token
+
+```bash
+curl -s -X POST http://localhost:5180/auth/token \
+  -H "Content-Type: application/json" \
+  -d '{"clientId":"claude-code","clientSecret":"<um-secret-forte>"}'
+```
+
+A resposta traz `accessToken` (vale 60 min) e `refreshToken`. Para renovar sem o secret:
+
+```bash
+curl -s -X POST http://localhost:5180/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d '{"refreshToken":"<refreshToken>"}'
+```
+
+Cada refresh token vale uma vez só; a resposta traz um par novo.
+
+### 2. Conectar o Claude Code
+
+O grupo pode ir na URL (um conector por grupo) ou no header:
+
+```bash
+# grupo na URL
+claude mcp add --transport http mymoney-home http://localhost:5180/mcp/HOME \
+  --header "Authorization: Bearer <accessToken>"
+
+# grupo no header
+claude mcp add --transport http mymoney http://localhost:5180/mcp \
+  --header "Authorization: Bearer <accessToken>" --header "X-Account-Group: HOME"
+```
+
+Depois peça ao Claude para rodar a tool `whogroupami`: ela mostra o grupo recebido, de onde veio (`url`, `header` ou `both`), o emissor do token e quantas contas o grupo enxerga.
+
+### 3. Chamar com `curl`
+
+O transporte é Streamable HTTP sem sessão: cada `POST` é independente e não precisa de `initialize` antes. O `Accept` precisa aceitar JSON e `text/event-stream`; a resposta vem como evento SSE (`event: message` / `data: {...}`).
+
+```bash
+# listar as tools
+curl -s -X POST http://localhost:5180/mcp/HOME \
+  -H "Authorization: Bearer <accessToken>" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+
+# chamar whogroupami
+curl -s -X POST http://localhost:5180/mcp/HOME \
+  -H "Authorization: Bearer <accessToken>" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"whogroupami","arguments":{}}}'
+```
+
+Exemplo de `data:` do `whogroupami` (o resultado vem como texto JSON dentro de `content`):
+
+```json
+{"accountGroup":"HOME","groupSource":"url","issuer":"local","visibleAccounts":0}
+```
+
+Para um grupo com espaço ou acento, codifique o segmento na URL (`/mcp/Fam%C3%ADlia`).
+
+| Resposta | Causa |
+|---|---|
+| `401` | Sem token, token expirado, ou nenhum `Auth:Clients` configurado para gerar um |
+| `400` `Missing X-Account-Group header` | `/mcp` (ou `/mcp/`) sem o header |
+| `400` `Blank account group in MCP URL` | Grupo em branco na URL (ex.: `/mcp/%20`) |
+| `400` `Account group mismatch` | Grupo da URL diferente do header |
+
 
 ## Migrations do EF Core
 

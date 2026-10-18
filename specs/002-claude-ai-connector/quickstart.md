@@ -33,3 +33,20 @@ dotnet user-secrets set "Auth:External:Audience" "<audience>"
 | 10 | `dotnet test` | all green | SC-002–004 |
 
 Scenarios 1–7, 9 and 10 are automated; scenario 8 is manual and recorded below when run.
+
+## Validation record (2026-10-16)
+
+Scenarios 1–7, 9 and 10 are covered by automated tests that run the real host
+(`WebApplicationFactory`) against real PostgreSQL; the Aspire AppHost smoke test also passes.
+`dotnet test MymoneyMcp.slnx`: **127 passed, 0 failed** (001 baseline: 58).
+
+| # | Test |
+|---|---|
+| 1, 2 | `WhoAmIToolTests.Url_group_is_decoded_trimmed_and_isolated`, `The_group_is_never_carried_over_to_the_next_call` |
+| 3, 4 | `WhoAmIToolTests.Header_group_on_the_plain_url`, `Url_group_and_matching_header_is_both` |
+| 5 | `GroupMismatchTests`, `UrlAccountGroupTests.Blank_url_group_is_400_and_does_not_echo_the_value` |
+| 6, 7 | `OAuthMetadataTests.Mcp_call_without_a_token_points_to_the_metadata`, `Metadata_is_anonymous_group_free_and_names_the_external_issuer` |
+| 9 | `OAuthMetadataTests.One_external_token_works_on_every_group_url` |
+
+Scenario 8 (real claude.ai, SC-001) is **pending**: it needs the identity provider (deferred) and
+the backlog item "Public URL behind a proxy or tunnel".

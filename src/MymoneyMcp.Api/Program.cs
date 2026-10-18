@@ -16,7 +16,8 @@ builder.AddDataInfrastructure();
 builder.Services.AddAuthInfrastructure(builder.Configuration);
 
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<IAccountGroupContext, HeaderAccountGroupContext>();
+builder.Services.AddScoped<IAccountGroupContext, RequestAccountGroupContext>();
+builder.Services.AddScoped<ICallerContext, HttpCallerContext>();
 
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ProblemDetailsExceptionHandler>();
@@ -27,12 +28,9 @@ builder.Services
     .AddMcpServer(options =>
     {
         options.ServerInfo = new() { Name = "mymoney-mcp", Version = "1.0.0" };
-
-        // Advertise the tools capability even with no tools yet, so tools/list returns []
-        // (contracts/mcp-endpoint.md). Tools from later features are added to this collection.
-        options.ToolCollection = [];
     })
-    .WithHttpTransport()
+    // Stateless: no session can carry a group from one call to the next (002 FR-007, research R3).
+    .WithHttpTransport(options => options.Stateless = true)
     .WithToolsFromAssembly();
 
 var app = builder.Build();
@@ -53,6 +51,9 @@ if (app.Environment.IsDevelopment())
 
 app.MapAuthEndpoints();
 app.MapMcp("/mcp");
+
+// One connector per group for clients that cannot send headers (002 FR-001, research R2).
+app.MapMcp("/mcp/{accountGroup}");
 
 await app.RunAsync();
 

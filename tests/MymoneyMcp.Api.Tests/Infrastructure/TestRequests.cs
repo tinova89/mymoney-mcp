@@ -26,10 +26,10 @@ public static class TestRequests
                 SecurityAlgorithms.HmacSha256),
         });
 
-    /// <summary>A minimal MCP <c>initialize</c> call to <c>/mcp</c>.</summary>
-    public static HttpRequestMessage McpInitialize(string? token, string? group)
+    /// <summary>A minimal MCP <c>initialize</c> call to <paramref name="path"/> (still percent-encoded).</summary>
+    public static HttpRequestMessage McpInitialize(string? token, string? group, string path = "/mcp")
     {
-        var request = new HttpRequestMessage(HttpMethod.Post, "/mcp")
+        var request = new HttpRequestMessage(HttpMethod.Post, new Uri(path, UriKind.Relative))
         {
             Content = JsonContent.Create(new
             {

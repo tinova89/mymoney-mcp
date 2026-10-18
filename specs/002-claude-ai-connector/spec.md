@@ -1,6 +1,6 @@
 # Feature Specification: Connect from claude.ai
 
-**Feature Branch**: `002-claude-ai-connector` | **Created**: 2026-10-12 | **Status**: Draft
+**Feature Branch**: `002-claude-ai-connector` | **Created**: 2026-10-12 | **Status**: Implemented (SC-001 pending: real claude.ai sign-in, see backlog)
 
 **Input**: Backlog item "Connect from claude.ai": claude.ai connectors cannot send `X-Account-Group`
 nor a static token (001 research R2); group in the MCP URL, OAuth sign-in via the external issuer.

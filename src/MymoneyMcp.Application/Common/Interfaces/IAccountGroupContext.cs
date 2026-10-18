@@ -7,4 +7,7 @@ namespace MymoneyMcp.Application.Common.Interfaces;
 public interface IAccountGroupContext
 {
     string Group { get; }
+
+    /// <summary>Where <see cref="Group"/> came from; <see cref="AccountGroupSource.None"/> when empty.</summary>
+    AccountGroupSource Source { get; }
 }
