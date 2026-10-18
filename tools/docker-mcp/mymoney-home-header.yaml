@@ -1,0 +1,16 @@
+# Docker MCP Toolkit: MymoneyMcp with the account group in the X-Account-Group header (plain /mcp).
+# Setup and commands: README.md, "Usar pelo Docker MCP Toolkit".
+# Do not also put a group in the URL: a URL group that differs from the header is rejected with 400.
+name: mymoney-home-header
+type: remote
+title: MymoneyMcp (HOME, header)
+description: Family finance MCP server, account group HOME sent in the X-Account-Group header.
+remote:
+  url: http://localhost:5180/mcp
+  transport_type: streamable-http
+  headers:
+    Authorization: Bearer ${MYMONEY_TOKEN}
+    X-Account-Group: HOME
+secrets:
+  - name: mymoney.token
+    env: MYMONEY_TOKEN

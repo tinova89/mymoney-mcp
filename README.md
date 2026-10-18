@@ -123,6 +123,43 @@ Para um grupo com espaço ou acento, codifique o segmento na URL (`/mcp/Fam%C3%A
 | `400` `Blank account group in MCP URL` | Grupo em branco na URL (ex.: `/mcp/%20`) |
 | `400` `Account group mismatch` | Grupo da URL diferente do header |
 
+### 4. Usar pelo Docker MCP Toolkit (opcional)
+
+O [Docker MCP Toolkit](https://docs.docker.com/ai/mcp-catalog-and-toolkit/toolkit/) (plugin `docker mcp` do Docker Desktop) pode agregar o MymoneyMcp a outros MCP servers num gateway só. O MymoneyMcp entra como servidor **remoto**; nada roda em container. Exemplos prontos em [`tools/docker-mcp/`](tools/docker-mcp/):
+
+| Arquivo | Grupo |
+|---|---|
+| [`mymoney-home-url.yaml`](tools/docker-mcp/mymoney-home-url.yaml) | Na URL (`/mcp/HOME`), um servidor por grupo |
+| [`mymoney-home-header.yaml`](tools/docker-mcp/mymoney-home-header.yaml) | No header `X-Account-Group` (`/mcp`) |
+
+Não coloque grupo na URL **e** um header diferente: a API recusa com `400` e o gateway sobe sem as tools do MymoneyMcp (o log mostra `Can't start ... Bad Request`).
+
+1. Pegue um token (passo 1 acima) e grave no keychain do Toolkit:
+
+   ```bash
+   docker mcp secret set mymoney.token=<accessToken>
+   ```
+
+   O comando fica no histórico do shell; o token expira em 60 min, mas apague a linha do histórico se preferir. Quando o token expirar, as chamadas voltam `401`: repita este passo.
+
+2. Crie um profile com um dos exemplos e teste sem cliente nenhum:
+
+   ```bash
+   docker mcp profile create --name mymoney-poc --server file://./tools/docker-mcp/mymoney-home-url.yaml
+   docker mcp tools call --gateway-arg=--profile=mymoney_poc whogroupami
+   ```
+
+   O Toolkit troca `-` por `_` no ID do profile (`mymoney-poc` → `mymoney_poc`); os demais comandos usam o ID (`docker mcp profile list`). O aviso `Dynamic OAuth discovery failed ... 401` ao criar o profile é esperado sem emissor externo configurado.
+
+3. Conecte o Claude Code ao gateway (`--global` evita escrever a configuração dentro do repositório):
+
+   ```bash
+   docker mcp client connect claude-code --profile mymoney_poc --global
+   ```
+
+- A URL é `localhost`: o gateway roda no host e a API escuta só no loopback, então `host.docker.internal` não funciona com o perfil `http`.
+- Para diagnosticar, `docker mcp tools ls --verbose --gateway-arg=--profile=mymoney_poc` mostra o tamanho do secret (`len=0` = vazio) e o erro de conexão com a API.
+- Desfazer: `docker mcp profile remove mymoney_poc` e `docker mcp secret rm mymoney.token`.
 
 ## Migrations do EF Core
 
