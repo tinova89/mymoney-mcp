@@ -37,7 +37,8 @@ Source of each decision: **Spec** = `spec.md` (incl. clarifications); **User** =
   1. `Default` absent (null) → `BRL`; present but blank or invalid → fatal problem.
   2. Entries with a blank `Group` → warning, entry ignored.
   3. `Group` trimmed; entries grouped by ordinal, case-sensitive name (BR-05).
-  4. A group with more than one entry → misconfigured (error), whatever the codes.
+  4. A group with more than one entry → misconfigured, whatever the codes; one error per entry,
+     so each log line points to its own `Currency:Groups:<index>`.
   5. A group with one entry whose code is blank or invalid → misconfigured (error).
   6. Otherwise the group maps to its normalized code.
 - **Startup** (`Api/Common/PrimaryCurrencyStartup.cs`, same split as `AuthStartupGuard`):
@@ -85,3 +86,6 @@ Source of each decision: **Spec** = `spec.md` (incl. clarifications); **User** =
   resolved in a request scope behaves as specified; `whogroupami` on a misconfigured group keeps
   working (FR-016).
 - No MCP tool, so no MCP tool integration test (Constitution V applies from 006).
+- Host tests run with environment `Testing`: user-secrets load only in `Development`, so a
+  developer's `Currency:*` secrets cannot change results; `appsettings.json` still loads.
+- Read once (FR-008) is proven by changing the configuration and calling `Reload()` after start.

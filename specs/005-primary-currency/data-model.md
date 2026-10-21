@@ -28,16 +28,17 @@ Decisions: [research.md](research.md).
 | Member | Meaning |
 |---|---|
 | `Default` | `CurrencyCode` for groups without their own entry |
-| per-group state | `Configured(CurrencyCode)` or `Misconfigured` |
-| `Lookup(group)` | the group's state, or `Default` when the group has no entry |
+| `Lookup(group)` | `PrimaryCurrencyLookup`: `Configured(CurrencyCode)` or `Misconfigured`; `Configured(Default)` when the group has no entry |
 
-`Build(CurrencySettings)` → table + problems. Problem kinds (R3):
+`Build(CurrencySettings)` → `PrimaryCurrencyBuildResult(Table, Problems)`. `Table` is `null` when
+a problem is fatal. Each `PrimaryCurrencyProblem` has `Kind`, `Severity`, `SettingPath`, `Group?`.
+Problem kinds (R3):
 
 | Kind | Severity | Effect |
 |---|---|---|
 | `InvalidDefault` (blank or not ISO 4217) | fatal | host does not start |
 | `BlankGroupName` | warning | entry ignored |
-| `DuplicateGroup` | error | group misconfigured |
+| `DuplicateGroup` (one per entry of that group) | error | group misconfigured |
 | `InvalidGroupCode` (blank or not ISO 4217) | error | group misconfigured |
 
 Each problem carries the setting path (`Currency:Default` or `Currency:Groups:<index>`) and, for

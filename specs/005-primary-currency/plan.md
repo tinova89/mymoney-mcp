@@ -118,10 +118,10 @@ the table) → services → `builder.Build()` → `AuthStartupGuard.WarnIfDisabl
 | US2 sc. 4, FR-004 | `HOME` entry, `home` call → default; ` Silva ` entry matches `Silva` (table unit) |
 | US3 sc. 1, FR-007 | `Default`=`XYZ` or blank → host fails, message names `Currency:Default` (Api host) |
 | US3 sc. 2–4, FR-014/015 | `A`=`REAL` → host starts, error log names `Currency:Groups:0` and `A`; service throws for `A`, `B`/`C` resolve (table/service unit + Api host) |
-| US3 sc. 5, FR-018 | Two `Silva` entries (equal or not) → misconfigured, error logged (table unit + Api host) |
+| US3 sc. 5, FR-018 | Two `Silva` entries (equal or not) → misconfigured, one error per entry (table unit + Api host) |
 | US3 sc. 6, FR-017 | Blank `Group` → warning, entry ignored (table unit + Api host) |
 | FR-016 | `whogroupami` on `/mcp/A` with `A` misconfigured → works (Api host) |
-| FR-008 | Table built once; changing configuration after start has no effect (Api host: same instance) |
+| FR-008 | Change `Currency:Default` and `Reload()` after start → still the old value (Api host) |
 | R4 | No group in context → `InvalidOperationException` (service unit) |
 
 ## Closing Doc Tasks (Constitution I)

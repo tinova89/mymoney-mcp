@@ -78,7 +78,7 @@ family's typo must not take the other families offline.
    gets an error saying the group's primary currency is misconfigured, never the default.
 4. **Given** that setup, **When** a feature asks as group `B` or `C`, **Then** it gets `EUR` or
    `BRL` as usual.
-5. **Given** two entries for group `Silva` (`EUR` and `USD`, even if equal), **When** the server
+5. **Given** two entries for group `Silva` (with the same or different codes), **When** the server
    starts, **Then** it starts, logs an error naming `Silva`, and `Silva` is misconfigured.
 6. **Given** a per-group entry with a blank group name, **When** the server starts, **Then** it
    starts, logs a warning, and ignores that entry.
@@ -98,24 +98,24 @@ family's typo must not take the other families offline.
 
 ### Functional Requirements
 
-- **FR-001**: Every account group MUST have exactly one primary currency, identified only by its ISO 4217 alphabetic code.
+- **FR-001**: Every account group MUST have exactly one primary currency, identified only by its ISO 4217 alphabetic code, unless it is misconfigured (FR-014–FR-018).
 - **FR-002**: The server configuration MUST allow one default currency and, optionally, one primary currency per group.
 - **FR-003**: A group with its own setting MUST use it; any other group MUST use the configured default, or `BRL` when none is configured.
 - **FR-004**: Group names in the configuration MUST be matched like the request's group (BR-05: exact, case-sensitive, trimmed).
 - **FR-005**: Currency codes MUST be accepted in any letter case and returned in uppercase.
-- **FR-006**: Any code on the current ISO 4217 list MUST be accepted; there is no list of allowed currencies to maintain.
+- **FR-006**: Any code on the current ISO 4217 list MUST be accepted; the operator maintains no list of allowed currencies, the system follows the ISO list.
 - **FR-007**: The server MUST refuse to start when the configured default code is blank or not valid ISO 4217, naming the setting.
-- **FR-014**: A group whose own code is blank or not valid ISO 4217 MUST NOT stop the server; it MUST be logged at startup as an error naming the group.
-- **FR-015**: Asking for a misconfigured group's primary currency MUST return an error saying it is misconfigured; it MUST NOT fall back to the default.
-- **FR-016**: A misconfigured group MUST NOT affect any other group's primary currency, nor its own calls that do not need a primary currency.
-- **FR-017**: A per-group entry with a blank group name MUST be ignored with a startup warning.
-- **FR-018**: A group with more than one entry (names matched as in FR-004) MUST be treated as misconfigured (FR-014–FR-016).
 - **FR-008**: The primary currency MUST be read once at startup; a change takes effect only after a restart.
 - **FR-009**: One shared service MUST give any feature the primary currency of the current call's group; features MUST NOT read the configuration directly.
 - **FR-010**: The primary currency MUST be determined only by the current call's group, never by another group's setting.
 - **FR-011**: There MUST be no MCP tool or REST endpoint to read or change the primary currency.
 - **FR-012**: Changing a primary currency MUST only change the default for accounts created afterwards; it MUST NOT change any stored data.
 - **FR-013**: `glossary.md`, `business-rules.md` and `mcp-tools.md` MUST describe the primary currency when this feature is implemented.
+- **FR-014**: A group whose own code is blank or not valid ISO 4217 MUST NOT stop the server; it MUST be logged at startup as an error naming the group.
+- **FR-015**: Asking for a misconfigured group's primary currency MUST return an error saying it is misconfigured; it MUST NOT fall back to the default.
+- **FR-016**: A misconfigured group MUST NOT affect any other group's primary currency, nor its own calls that do not need a primary currency.
+- **FR-017**: A per-group entry with a blank group name MUST be ignored with a startup warning.
+- **FR-018**: A group with more than one entry (names matched as in FR-004) MUST be treated as misconfigured (FR-014–FR-016).
 
 ### Key Entities
 
@@ -127,7 +127,7 @@ family's typo must not take the other families offline.
 
 ### Measurable Outcomes
 
-- **SC-001**: 100% of groups get a primary currency, including groups absent from the configuration.
+- **SC-001**: 100% of groups that are not misconfigured get a primary currency, including groups absent from the configuration.
 - **SC-002**: In the test suite, a group's primary currency never comes from another group's setting.
 - **SC-003**: 100% of invalid default codes stop the server at startup; 100% of invalid group codes are reported at startup and fail only that group's primary-currency requests.
 - **SC-004**: The operator can change a group's primary currency with one configuration change and one restart.

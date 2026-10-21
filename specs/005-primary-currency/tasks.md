@@ -52,7 +52,7 @@ real-host startup tests (plan Constitution Check).
 
 - [ ] T007 [P] [US1] `tests/MymoneyMcp.Application.Tests/Currencies/PrimaryCurrencyTableTests.cs` (unit): `Build` with `Default = null` → `Default` is `BRL`, no problems; `"USD"` → `USD`; `"usd"` → `USD`; `Lookup("any")` returns the default when the group has no entry
 - [ ] T008 [P] [US1] `tests/MymoneyMcp.Application.Tests/Currencies/PrimaryCurrencyServiceTests.cs` (unit, a local fake `IAccountGroupContext`): table with default `USD` → `GetForCurrentGroup()` is `USD` for groups `A` and `B`; context with empty group → `InvalidOperationException` (research R4)
-- [ ] T009 [P] [US1] `tests/MymoneyMcp.Api.Tests/Currencies/PrimaryCurrencyStartupTests.cs` (real host via `ApiFactory`, `ConfigureServices` replacing `IAccountGroupContext` with `FixedAccountGroup`; resolve `IPrimaryCurrency` from `factory.Services.CreateScope()`): no override → `BRL` (from `appsettings.json`); `Currency:Default` = `usd` → `USD`; `PrimaryCurrencyTable` resolved from two scopes is the same instance (FR-008)
+- [ ] T009 [P] [US1] `tests/MymoneyMcp.Api.Tests/Currencies/PrimaryCurrencyStartupTests.cs` (real host via `ApiFactory` with `Environment = "Testing"`, so the developer's user-secrets are not loaded; class marked `[Collection(PostgresCollection.Name)]`, because `ApiFactory` needs a database; `ConfigureServices` replacing `IAccountGroupContext` with `FixedAccountGroup`; resolve `IPrimaryCurrency` from `factory.Services.CreateScope()`): no override → `BRL` (from `appsettings.json`); `Currency:Default` = `usd` → `USD`; after start, set `Currency:Default` = `EUR` through the host's `IConfiguration` indexer and call `((IConfigurationRoot)configuration).Reload()` → a new scope still resolves `USD` (FR-008)
 
 ### Implementation
 
@@ -75,7 +75,7 @@ real-host startup tests (plan Constitution Check).
 
 - [ ] T015 [P] [US2] Add to `PrimaryCurrencyTableTests.cs`: default `BRL` + `A`=`EUR` → `Lookup("A")` is `EUR`, `Lookup("B")` is `BRL`; entry `HOME`=`EUR` → `Lookup("home")` is the default (BR-05); entry ` Silva `=`eur` → `Lookup("Silva")` is `EUR`; entry equal to the default is valid, no problems
 - [ ] T016 [P] [US2] Add to `PrimaryCurrencyServiceTests.cs`: one table with `A`=`EUR`, `B` absent → service for context `A` gets `EUR`, for `B` gets `BRL`; tables differing only in `A` (`EUR` vs `USD`) give `B` the same result (US2 sc. 3, FR-010, SC-002)
-- [ ] T017 [P] [US2] Add to `PrimaryCurrencyStartupTests.cs`: settings `Currency:Groups:0:Group`=`A`, `Currency:Groups:0:Code`=`EUR` → group `A` resolves `EUR`, group `B` resolves `BRL`
+- [ ] T017 [P] [US2] Add to `PrimaryCurrencyStartupTests.cs` (`Environment = "Testing"` as in T009): settings `Currency:Groups:0:Group`=`A`, `Currency:Groups:0:Code`=`EUR` → group `A` resolves `EUR`, group `B` resolves `BRL`
 
 ### Implementation
 
@@ -93,14 +93,14 @@ real-host startup tests (plan Constitution Check).
 
 ### Tests (write first, must fail)
 
-- [ ] T020 [P] [US3] Add to `PrimaryCurrencyTableTests.cs`: `Default` `"XYZ"`, `""`, `"   "` → one `InvalidDefault` Fatal problem with path `Currency:Default`; `A`=`REAL` and `A`=`""` → `Lookup("A")` is `Misconfigured`, one `InvalidGroupCode` Error with path `Currency:Groups:0` and group `A`; two `Silva` entries (`EUR`/`USD`, and `EUR`/`EUR`) → `Misconfigured`, `DuplicateGroup` Error naming `Silva`; `Silva` + ` Silva ` → duplicate; `Silva` + `silva` → two valid groups; blank `Group` (`""`, `"  "`, `null`) → `BlankGroupName` Warning with its path, entry ignored; with `A` misconfigured, `B`=`EUR` and unlisted `C` still resolve `EUR`/default
+- [ ] T020 [P] [US3] Add to `PrimaryCurrencyTableTests.cs`: `Default` `"XYZ"`, `""`, `"   "` → one `InvalidDefault` Fatal problem with path `Currency:Default`; `A`=`REAL` and `A`=`""` → `Lookup("A")` is `Misconfigured`, one `InvalidGroupCode` Error with path `Currency:Groups:0` and group `A`; two `Silva` entries (`EUR`/`USD`, and `EUR`/`EUR`) → `Misconfigured`, one `DuplicateGroup` Error **per entry** (paths `Currency:Groups:0` and `Currency:Groups:1`), each naming `Silva`; `Silva` + ` Silva ` → duplicate; `Silva` + `silva` → two valid groups; blank `Group` (`""`, `"  "`, `null`) → `BlankGroupName` Warning with its path, entry ignored; with `A` misconfigured, `B`=`EUR` and unlisted `C` still resolve `EUR`/default
 - [ ] T021 [P] [US3] Add to `PrimaryCurrencyServiceTests.cs`: misconfigured group → `PrimaryCurrencyMisconfiguredException`, never the default; its message contains neither the group name nor the configured code
-- [ ] T022 [P] [US3] Add to `PrimaryCurrencyStartupTests.cs` (pattern of `AuthDisabledTests`): `Currency:Default` = `XYZ` and `""` → `factory.CreateClient()` throws, flattened message contains `Currency:Default`; `Currency:Groups:0` = `Silva`/`REAL` → host starts, `factory.Logs` has an Error containing `Currency:Groups:0` and `Silva`, group `Silva` throws `PrimaryCurrencyMisconfiguredException`, group `B` resolves `BRL`; two `Silva` entries → Error log naming `Silva`; blank `Group` → Warning containing `Currency:Groups:0`; with `Silva` misconfigured, `whogroupami` on `/mcp/Silva` (`McpTestClient`, PostgreSQL) still succeeds (FR-016)
+- [ ] T022 [P] [US3] Add to `PrimaryCurrencyStartupTests.cs` (pattern of `AuthDisabledTests`; `Environment = "Testing"` as in T009): `Currency:Default` = `XYZ` and `""` → `factory.CreateClient()` throws, flattened message contains `Currency:Default`; `Currency:Groups:0` = `Silva`/`REAL` → host starts, `factory.Logs` has an Error containing `Currency:Groups:0` and `Silva`, group `Silva` throws `PrimaryCurrencyMisconfiguredException`, group `B` resolves `BRL`; two `Silva` entries → one Error log per entry (`Currency:Groups:0`, `Currency:Groups:1`), each naming `Silva`; blank `Group` → Warning containing `Currency:Groups:0`; with `Silva` misconfigured, `whogroupami` on `/mcp/Silva` (`McpTestClient`, PostgreSQL) still succeeds (FR-016)
 
 ### Implementation
 
 - [ ] T023 [P] [US3] Create `src/MymoneyMcp.Application/Common/Exceptions/PrimaryCurrencyMisconfiguredException.cs`: message "The primary currency of this account group is misconfigured." (no group, no code) (research R4)
-- [ ] T024 [US3] Complete `PrimaryCurrencyTable.Build`: research R3 rules 1 (blank/invalid default → Fatal), 2 (blank group → Warning, ignored), 4 (more than one entry → `DuplicateGroup`, misconfigured), 5 (blank/invalid code → `InvalidGroupCode`, misconfigured); `PrimaryCurrencyService` throws `PrimaryCurrencyMisconfiguredException` on `Misconfigured`
+- [ ] T024 [US3] Complete `PrimaryCurrencyTable.Build`: research R3 rules 1 (blank/invalid default → Fatal), 2 (blank group → Warning, ignored), 4 (more than one entry → one `DuplicateGroup` per entry, misconfigured), 5 (blank/invalid code → `InvalidGroupCode`, misconfigured); `PrimaryCurrencyService` throws `PrimaryCurrencyMisconfiguredException` on `Misconfigured`
 - [ ] T025 [US3] In `src/MymoneyMcp.Api/Common/PrimaryCurrencyStartup.cs`: throw `InvalidOperationException` naming `Currency:Default` on a Fatal problem (before `builder.Build()`); add `LogProblems(result, ILogger)` logging each Error/Warning with its setting path and group (no other configuration value); call it in `src/MymoneyMcp.Api/Program.cs` after `AuthStartupGuard.WarnIfDisabled`
 - [ ] T026 [US3] Run `dotnet build` (0 warnings) and `dotnet test`: T020–T022 green
 
@@ -148,5 +148,5 @@ Phase 6: T030, T031, T032, T033
 
 ## Notes
 
-- Host tests set explicit `Currency:*` values; `""` (not `null`) overrides a developer's user-secrets, as in `AuthDisabledTests`.
+- Currency host tests run with `Environment = "Testing"`: user-secrets load only in `Development`, so a developer's `Currency:*` secrets cannot change the results. `appsettings.json` still loads (the `BRL` base). The rule "absent `Default` → `BRL`" is proven by the T007 unit test.
 - Commit after each task or logical group; stop at any checkpoint to validate.
